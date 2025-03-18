@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from openpyxl import Workbook
-from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -672,15 +672,15 @@ def generate_html_report(df, selected_column, variable_type, frequency_table, me
     </html>
     """
     return html
-
-# Función para exportar a PDF con ReportLab
+#Exporta los resultados a un archivo PDF personalizado con soporte para tablas de frecuencia grandes.
 def export_to_pdf(df, selected_column, variable_type, frequency_table, measures, quartiles, figs, selected_items, filename="Resultados.pdf"):
     """
-    Exporta los resultados a un archivo PDF personalizado.
+    Exporta los resultados a un archivo PDF personalizado con soporte para tablas de frecuencia grandes.
     """
     # Configuración inicial del PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    # Usar landscape para tablas anchas
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=18)
     
     # Estilos
     styles = getSampleStyleSheet()
@@ -705,7 +705,7 @@ def export_to_pdf(df, selected_column, variable_type, frequency_table, measures,
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),  # Reducir el tamaño de la fuente para tablas grandes
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.lightgrey, colors.white]),
     ])
     
@@ -727,25 +727,48 @@ def export_to_pdf(df, selected_column, variable_type, frequency_table, measures,
         # Convertir la tabla de frecuencia a formato para ReportLab
         frequency_df = pd.DataFrame(frequency_table)
         
-        # Reducir columnas si hay demasiadas para ajustar al PDF
-        if len(frequency_df.columns) > 7:
-            # Seleccionar las columnas más importantes
-            selected_cols = frequency_df.columns[:7]
-            frequency_df = frequency_df[selected_cols]
-            elements.append(Paragraph("(Se muestran solo las columnas más importantes por limitaciones de espacio)", normal_style))
+        # En vez de reducir columnas, dividir la tabla en secciones si es necesario
+        all_columns = frequency_df.columns.tolist()
+        max_cols_per_table = 6  # Número máximo de columnas por tabla
         
-        # Limitar el número de filas si es muy grande
-        if len(frequency_df) > 30:
-            frequency_df = pd.concat([frequency_df.head(15), frequency_df.tail(15)])
-            elements.append(Paragraph("(Se muestran las primeras y últimas 15 filas)", normal_style))
+        # Dividir las columnas en grupos manejables
+        column_groups = [all_columns[i:i + max_cols_per_table] 
+                         for i in range(0, len(all_columns), max_cols_per_table)]
         
-        # Crear tabla para PDF
-        data = [frequency_df.columns.tolist()] + frequency_df.values.tolist()
-        table = Table(data)
-        table.setStyle(table_style)
-        
-        # Añadir la tabla al PDF con KeepTogether para evitar divisiones
-        elements.append(KeepTogether([table, Spacer(1, 12)]))
+        for group_idx, col_group in enumerate(column_groups):
+            if group_idx > 0:
+                elements.append(Paragraph(f"Tabla de Frecuencia (continuación {group_idx+1})", subtitle_style))
+            
+            # Incluir siempre la primera columna (valores o categorías) en cada grupo
+            if 'valor' in frequency_df.columns and 'valor' not in col_group:
+                selected_cols = ['valor'] + col_group
+            elif group_idx > 0:
+                # Si no hay columna 'valor', usar la primera columna original como identificador
+                first_col = all_columns[0]
+                selected_cols = [first_col] + col_group
+                if first_col in col_group:
+                    selected_cols.remove(first_col)  # Evitar duplicados
+            else:
+                selected_cols = col_group
+            
+            # Obtener el dataframe con las columnas seleccionadas
+            partial_df = frequency_df[selected_cols]
+            
+            # Limitar el número de filas si es muy grande, pero mostrar más filas
+            if len(partial_df) > 40:
+                partial_df = pd.concat([partial_df.head(20), partial_df.tail(20)])
+                elements.append(Paragraph("(Se muestran las primeras y últimas 20 filas)", normal_style))
+            
+            # Crear tabla para PDF
+            data = [partial_df.columns.tolist()] + partial_df.values.tolist()
+            
+            # Ajustar el ancho de las columnas
+            col_widths = [min(80, 500/len(selected_cols)) for _ in selected_cols]
+            table = Table(data, colWidths=col_widths)
+            table.setStyle(table_style)
+            
+            # Añadir la tabla al PDF con KeepTogether para evitar divisiones
+            elements.append(KeepTogether([table, Spacer(1, 12)]))
     
     # Medidas de resumen si están seleccionadas
     if 'medidas_resumen' in selected_items and measures:
@@ -755,12 +778,16 @@ def export_to_pdf(df, selected_column, variable_type, frequency_table, measures,
         measures_data = [["Medida", "Valor"]]
         for measure, value in measures.items():
             if value is not None:
-                measures_data.append([measure, str(value)])
+                # Formatear números con 4 decimales para mejorar presentación
+                if isinstance(value, (int, float)):
+                    measures_data.append([measure, f"{value:.4f}"])
+                else:
+                    measures_data.append([measure, str(value)])
             else:
                 measures_data.append([measure, "No disponible"])
         
         # Crear tabla para PDF
-        table = Table(measures_data)
+        table = Table(measures_data, colWidths=[200, 200])
         table.setStyle(table_style)
         elements.append(KeepTogether([table, Spacer(1, 12)]))
     
@@ -772,12 +799,15 @@ def export_to_pdf(df, selected_column, variable_type, frequency_table, measures,
         quartiles_data = [["Cuartil", "Valor"]]
         for quartile, value in quartiles.items():
             if value is not None:
-                quartiles_data.append([quartile, str(value)])
+                if isinstance(value, (int, float)):
+                    quartiles_data.append([quartile, f"{value:.4f}"])
+                else:
+                    quartiles_data.append([quartile, str(value)])
             else:
                 quartiles_data.append([quartile, "No disponible"])
         
         # Crear tabla para PDF
-        table = Table(quartiles_data)
+        table = Table(quartiles_data, colWidths=[200, 200])
         table.setStyle(table_style)
         elements.append(KeepTogether([table, Spacer(1, 12)]))
     
@@ -789,7 +819,7 @@ def export_to_pdf(df, selected_column, variable_type, frequency_table, measures,
             if fig is not None:
                 # Guardar la figura como imagen
                 img_buf = save_plot_for_pdf(fig, f"graph_{i}")
-                img = Image(img_buf, width=450, height=300)
+                img = Image(img_buf, width=500, height=300)  # Ajustar tamaño para modo landscape
                 elements.append(img)
                 elements.append(Spacer(1, 12))
     
@@ -797,7 +827,6 @@ def export_to_pdf(df, selected_column, variable_type, frequency_table, measures,
     doc.build(elements)
     buffer.seek(0)
     return buffer
-
 # ------------------- INTERFAZ DE USUARIO MEJORADA -------------------
 
 def main():
