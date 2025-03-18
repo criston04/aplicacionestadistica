@@ -1,4 +1,4 @@
-# Análisis Estadístico Descriptivo con Streamlit
+# Análisis Estadístico con Streamlit
 
 Este proyecto es una aplicación web desarrollada con **Streamlit** que permite realizar un análisis estadístico descriptivo completo sobre un conjunto de datos. La aplicación es capaz de manejar tanto variables **cualitativas** como **cuantitativas**, generando tablas de frecuencia, medidas de tendencia central, gráficos interactivos y exportando los resultados en diferentes formatos (Excel, PDF, HTML).
 
