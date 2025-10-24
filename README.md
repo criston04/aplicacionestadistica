@@ -26,6 +26,7 @@ Este proyecto es una aplicación web desarrollada con **Streamlit** que permite 
    - **Excel**: Exporta la tabla de frecuencia, medidas de resumen y cuartiles en un archivo Excel.
    - **PDF**: Genera un informe en PDF con las tablas y gráficos seleccionados.
    - **HTML**: Crea un informe HTML interactivo con los resultados del análisis.
+   - **📈 Código R Studio** ⭐ **NUEVO**: Genera código R completo con tus datos y análisis para usar en RStudio.
 
 5. **Personalización**:
    - Permite seleccionar el tema de visualización (default, dark, blue, green, purple).
@@ -69,7 +70,34 @@ streamlit run criston.py
 
 4. **Exportación de resultados**:
    - Selecciona los elementos que deseas exportar (tabla de frecuencia, medidas de resumen, cuartiles, gráficos).
-   - Descarga los resultados en formato Excel, PDF o HTML.
+   - Descarga los resultados en formato Excel, PDF, HTML o **Código R** para RStudio.
+   - **Nuevo**: El código R incluye tus datos originales y todo el análisis completo listo para ejecutar.
+
+## 🌟 Nueva Funcionalidad: Exportación a R Studio
+
+La aplicación ahora permite exportar el análisis completo a código de **R Studio**. Esta característica incluye:
+
+- ✅ **Datos originales**: Todos tus datos listos para usar en R
+- ✅ **Código completo**: Análisis estadístico reproducible
+- ✅ **Visualizaciones**: Gráficos con ggplot2
+- ✅ **Comentarios**: Código documentado y explicativo
+- ✅ **Resultados**: Los valores calculados para comparación
+
+### Cómo usar la exportación a R:
+
+1. Realiza tu análisis en la aplicación web
+2. Ve a la sección "4️⃣ Exportar"
+3. Haz clic en **"📈 Código R Studio"**
+4. Abre el archivo `.R` en RStudio
+5. Instala las librerías necesarias: `ggplot2` y `dplyr`
+6. ¡Ejecuta el código!
+
+Para más detalles, consulta la **[Guía de Exportación a R](GUIA_EXPORTACION_R.md)**.
+
+### Ejemplos incluidos:
+
+- `EJEMPLO_Codigo_R_Precio.R`: Análisis de variable cuantitativa
+- `EJEMPLO_Codigo_R_Categoria.R`: Análisis de variable cualitativa
 
 ## Ejemplos de uso
 
